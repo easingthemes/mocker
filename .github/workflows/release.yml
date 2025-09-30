@@ -9,6 +9,8 @@ jobs:
   release:
     name: Test, Build and Release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       matrix:
         os: [ ubuntu-latest ]
@@ -28,7 +30,7 @@ jobs:
       - name: Run Tests
         run: npm test --if-present
       - name: Release
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v5
         with:
           dry_run: true
           extra_plugins: |
