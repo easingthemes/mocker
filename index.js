@@ -496,7 +496,7 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
 });
 
 // Dynamic mock routing - this should be last to catch all routes
-app.all('*', (req, res) => {
+app.use((req, res, next) => {
   const endpoints = loadEndpoints();
   const method = req.method.toUpperCase();
   const path = req.path;
@@ -508,7 +508,7 @@ app.all('*', (req, res) => {
   });
   
   if (!endpoint) {
-    return res.status(404).json({ error: 'Endpoint not found' });
+    return next(); // Let Express handle 404 for unmatched routes
   }
   
   // Find the selected response or default to first response
