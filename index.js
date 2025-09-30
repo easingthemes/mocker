@@ -54,7 +54,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Serve static files early in the middleware stack
-app.use(express.static('public'));
+// Use absolute path to the package directory for npm package usage
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Data storage paths - configurable via environment variables or CLI
 const MOCKS_DIR = mocksDir || path.join(process.cwd(), 'mocks');
