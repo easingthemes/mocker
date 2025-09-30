@@ -52,7 +52,6 @@ const PORT = port;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static('public'));
 
 // Data storage paths - configurable via environment variables or CLI
 const MOCKS_DIR = mocksDir || path.join(process.cwd(), 'mocks');
@@ -494,6 +493,9 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
     res.status(500).json({ error: 'Failed to select response' });
   }
 });
+
+// Serve static files before dynamic routing
+app.use(express.static('public'));
 
 // Dynamic mock routing - this should be last to catch all routes
 app.use((req, res, next) => {
