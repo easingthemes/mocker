@@ -497,6 +497,20 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
 
 // Dynamic mock routing - this should be last to catch all routes
 app.use((req, res, next) => {
+  // Skip static files and API routes
+  if (req.path.startsWith('/api/') || 
+      req.path.endsWith('.css') || 
+      req.path.endsWith('.js') || 
+      req.path.endsWith('.html') ||
+      req.path.endsWith('.png') ||
+      req.path.endsWith('.jpg') ||
+      req.path.endsWith('.jpeg') ||
+      req.path.endsWith('.gif') ||
+      req.path.endsWith('.svg') ||
+      req.path.endsWith('.ico')) {
+    return next();
+  }
+  
   const endpoints = loadEndpoints();
   const method = req.method.toUpperCase();
   const path = req.path;
