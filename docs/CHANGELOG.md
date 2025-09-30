@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/easingthemes/mocker/compare/v1.0.1...v1.0.2) (2025-09-30)
+
+
+### Bug Fixes
+
+* update route match ([d4a4584](https://github.com/easingthemes/mocker/commit/d4a45848229a96e6850b4fec8c3f42a721591450))
+
 ## [1.0.1](https://github.com/easingthemes/mocker/compare/v1.0.0...v1.0.1) (2025-09-30)
 
 
