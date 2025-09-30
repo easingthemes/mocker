@@ -2,6 +2,10 @@
   "name": "@draganfilipovic/mocker",
   "version": "1.0.0",
   "description": "Simple Node.js mock server with GUI for managing API endpoints and responses",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "index.js",
   "bin": {
     "mocker": "./index.js"
