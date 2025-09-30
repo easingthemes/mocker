@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Server GUI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Mock Server</h1>
+            <p>Create and manage mock API endpoints with custom responses</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="section-title">Endpoints</div>
+                <button class="btn" onclick="openAddEndpointModal()" style="margin-bottom: 15px;">+ Add Endpoint</button>
+                <div id="endpointList" class="endpoint-list">
+                    <div class="loading">Loading endpoints...</div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div id="endpointDetails">
+                    <div class="empty-state">
+                        <h3>Select an endpoint</h3>
+                        <p>Choose an endpoint from the sidebar to view and manage its responses</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Endpoint Modal -->
+    <div id="addEndpointModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Endpoint</h2>
+                <span class="close" onclick="closeModal('addEndpointModal')">&times;</span>
+            </div>
+            <form id="addEndpointForm">
+                <div class="form-group">
+                    <label for="endpointPath">Path</label>
+                    <input type="text" id="endpointPath" class="form-control" placeholder="/api/users" required>
+                </div>
+                <div class="form-group">
+                    <label for="endpointMethod">Method</label>
+                    <select id="endpointMethod" class="form-control" required>
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="PATCH">PATCH</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addEndpointModal')">Cancel</button>
+                    <button type="submit" class="btn">Create Endpoint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Response Modal -->
+    <div id="addResponseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Response</h2>
+                <span class="close" onclick="closeModal('addResponseModal')">&times;</span>
+            </div>
+            <form id="addResponseForm">
+                <div class="form-group">
+                    <label for="responseName">Name</label>
+                    <input type="text" id="responseName" class="form-control" placeholder="Response name" required>
+                </div>
+                <div class="form-group">
+                    <label for="responseStatusCode">Status Code</label>
+                    <select id="responseStatusCode" class="form-control" required>
+                        <option value="200">200 - OK</option>
+                        <option value="201">201 - Created</option>
+                        <option value="204">204 - No Content</option>
+                        <option value="400">400 - Bad Request</option>
+                        <option value="401">401 - Unauthorized</option>
+                        <option value="403">403 - Forbidden</option>
+                        <option value="404">404 - Not Found</option>
+                        <option value="409">409 - Conflict</option>
+                        <option value="422">422 - Unprocessable Entity</option>
+                        <option value="429">429 - Too Many Requests</option>
+                        <option value="500">500 - Internal Server Error</option>
+                        <option value="501">501 - Not Implemented</option>
+                        <option value="502">502 - Bad Gateway</option>
+                        <option value="503">503 - Service Unavailable</option>
+                        <option value="504">504 - Gateway Timeout</option>
+                        <option value="301">301 - Moved Permanently</option>
+                        <option value="302">302 - Found</option>
+                        <option value="307">307 - Temporary Redirect</option>
+                        <option value="308">308 - Permanent Redirect</option>
+                        <option value="418">418 - I'm a teapot</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="responseBody">Response Body (JSON)</label>
+                    <textarea id="responseBody" class="json-editor" placeholder='{"message": "Hello World"}'></textarea>
+                    <div id="responseBodyValidation" class="json-validation-message"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addResponseModal')">Cancel</button>
+                    <button type="submit" class="btn">Add Response</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Response Modal -->
+    <div id="editResponseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Response</h2>
+                <span class="close" onclick="closeModal('editResponseModal')">&times;</span>
+            </div>
+            <form id="editResponseForm">
+                <input type="hidden" id="editResponseOriginalName">
+                <div class="form-group">
+                    <label for="editResponseName">Name</label>
+                    <input type="text" id="editResponseName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="editResponseStatusCode">Status Code</label>
+                    <select id="editResponseStatusCode" class="form-control" required>
+                        <option value="200">200 - OK</option>
+                        <option value="201">201 - Created</option>
+                        <option value="204">204 - No Content</option>
+                        <option value="400">400 - Bad Request</option>
+                        <option value="401">401 - Unauthorized</option>
+                        <option value="403">403 - Forbidden</option>
+                        <option value="404">404 - Not Found</option>
+                        <option value="409">409 - Conflict</option>
+                        <option value="422">422 - Unprocessable Entity</option>
+                        <option value="429">429 - Too Many Requests</option>
+                        <option value="500">500 - Internal Server Error</option>
+                        <option value="501">501 - Not Implemented</option>
+                        <option value="502">502 - Bad Gateway</option>
+                        <option value="503">503 - Service Unavailable</option>
+                        <option value="504">504 - Gateway Timeout</option>
+                        <option value="301">301 - Moved Permanently</option>
+                        <option value="302">302 - Found</option>
+                        <option value="307">307 - Temporary Redirect</option>
+                        <option value="308">308 - Permanent Redirect</option>
+                        <option value="418">418 - I'm a teapot</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="editResponseBody">Response Body (JSON)</label>
+                    <textarea id="editResponseBody" class="json-editor"></textarea>
+                    <div id="editResponseBodyValidation" class="json-validation-message"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editResponseModal')">Cancel</button>
+                    <button type="submit" class="btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
