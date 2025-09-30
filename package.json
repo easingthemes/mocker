@@ -26,20 +26,20 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/easingthemes/mocker-server.git"
+    "url": "https://github.com/easingthemes/mocker.git"
   },
   "bugs": {
-    "url": "https://github.com/easingthemes/mocker-server/issues"
+    "url": "https://github.com/easingthemes/mocker/issues"
   },
-  "homepage": "https://github.com/easingthemes/mocker-server#readme",
+  "homepage": "https://github.com/easingthemes/mocker#readme",
   "dependencies": {
-    "body-parser": "^1.20.2",
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "fs-extra": "^11.1.1"
+    "express": "^5.1.0",
+    "fs-extra": "^11.3.2"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "files": [
     "index.js",
