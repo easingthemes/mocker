@@ -4,6 +4,8 @@ Simple Node.js mock server with a beautiful GUI for managing API endpoints and r
 
 ## Features
 
+![screenshot.png](docs/screenshot.png)
+
 - 🎨 **Beautiful GUI** - Intuitive web interface for managing endpoints
 - 🚀 **Easy Setup** - Start mocking APIs in seconds
 - 📁 **File-based Storage** - All data stored in organized JSON files
