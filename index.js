@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs-extra');
 const path = require('path');
+const net = require('net');
 
 const app = express();
 
@@ -64,6 +65,24 @@ const ENDPOINTS_DIR = path.join(MOCKS_DIR, 'endpoints');
 // Ensure data directories exist
 fs.ensureDirSync(MOCKS_DIR);
 fs.ensureDirSync(ENDPOINTS_DIR);
+
+// Function to check if port is available
+const isPortAvailable = (port) => {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    
+    server.listen(port, () => {
+      server.once('close', () => {
+        resolve(true);
+      });
+      server.close();
+    });
+    
+    server.on('error', () => {
+      resolve(false);
+    });
+  });
+};
 
 // Helper functions
 const getEndpointFilePath = (endpointPath, method, statusCode, name) => {
@@ -543,10 +562,28 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Mocker Server running on http://localhost:${PORT}`);
-  console.log(`📱 GUI available at http://localhost:${PORT}`);
-  console.log(`📁 Mocks directory: ${MOCKS_DIR}`);
-  console.log(`💡 Use --help for more options`);
+// Check port availability and start server
+const startServer = async () => {
+  const portAvailable = await isPortAvailable(PORT);
+  
+  if (!portAvailable) {
+    console.log(`⚠️  Warning: Port ${PORT} is already in use!`);
+    console.log(`   Another process might be using this port.`);
+    console.log(`   Try using a different port with: --port <number>`);
+    console.log(`   Or check what's running on port ${PORT} with: lsof -i :${PORT}`);
+    console.log('');
+  }
+  
+  app.listen(PORT, () => {
+    console.log(`🚀 Mocker Server running on http://localhost:${PORT}`);
+    console.log(`📱 GUI available at http://localhost:${PORT}`);
+    console.log(`📁 Mocks directory: ${MOCKS_DIR}`);
+    console.log(`💡 Use --help for more options`);
+  });
+};
+
+startServer().catch(error => {
+  console.error('❌ Failed to start server:', error.message);
+  process.exit(1);
 });
 
