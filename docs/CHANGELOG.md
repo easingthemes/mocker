@@ -1,3 +1,11 @@
+## [1.0.5](https://github.com/easingthemes/mocker/compare/v1.0.4...v1.0.5) (2025-09-30)
+
+
+### Bug Fixes
+
+* update static files route ([9c72957](https://github.com/easingthemes/mocker/commit/9c72957ff80690ce25aebe36d85a4a1d3cc58cca))
+* update static files route ([e60ac9f](https://github.com/easingthemes/mocker/commit/e60ac9fa208261771b51453d89221f447a26cfd2))
+
 ## [1.0.4](https://github.com/easingthemes/mocker/compare/v1.0.3...v1.0.4) (2025-09-30)
 
 
