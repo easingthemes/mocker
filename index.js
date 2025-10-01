@@ -500,8 +500,8 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
 
 // Dynamic mock routing - this should be last to catch all routes
 app.use((req, res, next) => {
-  // Skip static files and API routes
-  if (req.path.startsWith('/api/') || 
+  // Skip static files and management API routes
+  if (req.path.startsWith('/api/endpoints') || 
       req.path.endsWith('.css') || 
       req.path.endsWith('.js') || 
       req.path.endsWith('.html') ||
