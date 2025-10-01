@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/easingthemes/mocker/compare/v1.0.5...v1.0.6) (2025-10-01)
+
+
+### Bug Fixes
+
+* update post habdling ([da000ce](https://github.com/easingthemes/mocker/commit/da000cee37b32618c40d9ee64829e368ed57fffa))
+
 ## [1.0.5](https://github.com/easingthemes/mocker/compare/v1.0.4...v1.0.5) (2025-09-30)
 
 
