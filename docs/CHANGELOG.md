@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/easingthemes/mocker/compare/v1.0.7...v1.1.0) (2025-10-03)
+
+
+### Features
+
+* add latency and other settings ([d7e5966](https://github.com/easingthemes/mocker/commit/d7e59663887cfde5df99de5d41a62ab3327ebaf2))
+
 ## [1.0.7](https://github.com/easingthemes/mocker/compare/v1.0.6...v1.0.7) (2025-10-01)
 
 
