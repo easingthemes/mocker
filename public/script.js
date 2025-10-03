@@ -547,3 +547,90 @@ window.onclick = function(event) {
         }
     });
 }
+
+// Settings functionality
+let settings = {
+    serverPort: 3000,
+    corsEnabled: true,
+    autoReload: true,
+    logLevel: 'info',
+    responseDelay: 0
+};
+
+// Load settings from localStorage
+function loadSettings() {
+    const savedSettings = localStorage.getItem('mockerSettings');
+    if (savedSettings) {
+        settings = { ...settings, ...JSON.parse(savedSettings) };
+    }
+    
+    // Apply settings to UI
+    document.getElementById('serverPort').value = settings.serverPort;
+    document.getElementById('corsEnabled').checked = settings.corsEnabled;
+    document.getElementById('autoReload').checked = settings.autoReload;
+    document.getElementById('logLevel').value = settings.logLevel;
+    document.getElementById('responseDelay').value = settings.responseDelay;
+}
+
+// Save settings to localStorage and apply to server
+async function saveSettings() {
+    // Get values from form
+    settings.serverPort = parseInt(document.getElementById('serverPort').value) || 3000;
+    settings.corsEnabled = document.getElementById('corsEnabled').checked;
+    settings.autoReload = document.getElementById('autoReload').checked;
+    settings.logLevel = document.getElementById('logLevel').value;
+    settings.responseDelay = parseInt(document.getElementById('responseDelay').value) || 0;
+    
+    // Save to localStorage
+    localStorage.setItem('mockerSettings', JSON.stringify(settings));
+    
+    // Apply settings to server
+    try {
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+            showSuccess('Settings saved successfully!');
+        } else {
+            showError('Failed to save settings to server');
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showError('Failed to save settings');
+    }
+}
+
+// Reset settings to defaults
+function resetSettings() {
+    settings = {
+        serverPort: 3000,
+        corsEnabled: true,
+        autoReload: true,
+        logLevel: 'info',
+        responseDelay: 0
+    };
+    
+    // Update UI
+    document.getElementById('serverPort').value = settings.serverPort;
+    document.getElementById('corsEnabled').checked = settings.corsEnabled;
+    document.getElementById('autoReload').checked = settings.autoReload;
+    document.getElementById('logLevel').value = settings.logLevel;
+    document.getElementById('responseDelay').value = settings.responseDelay;
+    
+    // Clear localStorage
+    localStorage.removeItem('mockerSettings');
+    
+    showSuccess('Settings reset to defaults');
+}
+
+// Initialize settings when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadEndpoints();
+    setupEventListeners();
+    loadSettings(); // Add this line to load settings
+});

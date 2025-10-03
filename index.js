@@ -66,6 +66,14 @@ const ENDPOINTS_DIR = path.join(MOCKS_DIR, 'endpoints');
 fs.ensureDirSync(MOCKS_DIR);
 fs.ensureDirSync(ENDPOINTS_DIR);
 
+// Settings storage
+let serverSettings = {
+  responseDelay: 0,
+  corsEnabled: true,
+  autoReload: true,
+  logLevel: 'info'
+};
+
 // Function to check if port is available
 const isPortAvailable = (port) => {
   return new Promise((resolve) => {
@@ -517,10 +525,39 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
   }
 });
 
+// Settings API
+app.get('/api/settings', (req, res) => {
+  res.json(serverSettings);
+});
+
+app.post('/api/settings', (req, res) => {
+  const { responseDelay, corsEnabled, autoReload, logLevel } = req.body;
+  
+  // Validate and update settings
+  if (responseDelay !== undefined) {
+    serverSettings.responseDelay = Math.max(0, Math.min(10000, parseInt(responseDelay) || 0));
+  }
+  
+  if (corsEnabled !== undefined) {
+    serverSettings.corsEnabled = Boolean(corsEnabled);
+  }
+  
+  if (autoReload !== undefined) {
+    serverSettings.autoReload = Boolean(autoReload);
+  }
+  
+  if (logLevel !== undefined && ['error', 'warn', 'info', 'debug'].includes(logLevel)) {
+    serverSettings.logLevel = logLevel;
+  }
+  
+  res.json({ message: 'Settings updated successfully', settings: serverSettings });
+});
+
 // Dynamic mock routing - this should be last to catch all routes
 app.use((req, res, next) => {
   // Skip static files and management API routes
   if (req.path.startsWith('/api/endpoints') || 
+      req.path.startsWith('/api/settings') ||
       req.path.endsWith('.css') || 
       req.path.endsWith('.js') || 
       req.path.endsWith('.html') ||
@@ -553,8 +590,14 @@ app.use((req, res, next) => {
     selectedResponse = endpoint.responses[0];
   }
   
-  // Return the mock response
-  res.status(selectedResponse.statusCode).json(selectedResponse.body);
+  // Apply response delay if configured
+  if (serverSettings.responseDelay > 0) {
+    setTimeout(() => {
+      res.status(selectedResponse.statusCode).json(selectedResponse.body);
+    }, serverSettings.responseDelay);
+  } else {
+    res.status(selectedResponse.statusCode).json(selectedResponse.body);
+  }
 });
 
 // Serve the GUI
