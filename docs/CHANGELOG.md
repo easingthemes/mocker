@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/easingthemes/mocker/compare/v1.0.6...v1.0.7) (2025-10-01)
+
+
+### Bug Fixes
+
+* check port usage ([27b994a](https://github.com/easingthemes/mocker/commit/27b994a76794a12c3f3257bafc659d373cde29b0))
+
 ## [1.0.6](https://github.com/easingthemes/mocker/compare/v1.0.5...v1.0.6) (2025-10-01)
 
 
