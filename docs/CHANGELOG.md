@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/easingthemes/mocker/compare/v1.1.0...v1.2.0) (2025-10-10)
+
+
+### Features
+
+* Add dynamic path support ([459b5b9](https://github.com/easingthemes/mocker/commit/459b5b972d37f88d0e8652cfce3418e404e98fee))
+
 # [1.1.0](https://github.com/easingthemes/mocker/compare/v1.0.7...v1.1.0) (2025-10-03)
 
 
