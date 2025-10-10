@@ -78,6 +78,7 @@ function renderEndpointList() {
             <div>
                 <span class="endpoint-method method-${endpoint.method.toLowerCase()}">${endpoint.method}</span>
                 <span class="endpoint-path">${endpoint.path}</span>
+                ${endpoint.path.includes('{') ? '<span class="dynamic-indicator" title="Dynamic path">🔄</span>' : ''}
             </div>
             <div class="endpoint-status">
                 <span class="status-label">Selected:</span>
@@ -135,7 +136,26 @@ async function testEndpoint(endpointId) {
         }
         
         const endpoint = await endpointResponse.json();
-        const testUrl = `${window.location.origin}${endpoint.path}`;
+        
+        // Handle dynamic paths by replacing {param} with test values
+        let testPath = endpoint.path;
+        if (testPath.includes('{')) {
+            // Replace dynamic segments with test values
+            testPath = testPath.replace(/\{[^}]+\}/g, (match) => {
+                const paramName = match.slice(1, -1); // Remove { and }
+                // Use different test values based on parameter name
+                const testValues = {
+                    'id': '123',
+                    'userId': '456',
+                    'email': 'test@example.com',
+                    'postId': '789',
+                    'commentId': '101'
+                };
+                return testValues[paramName] || 'test-value';
+            });
+        }
+        
+        const testUrl = `${window.location.origin}${testPath}`;
         
         // Make the test request with the correct method
         const testResponse = await fetch(testUrl, {
@@ -181,13 +201,42 @@ async function testEndpoint(endpointId) {
 function renderEndpointDetails(endpoint) {
     const container = document.getElementById('endpointDetails');
     const baseUrl = window.location.origin;
-    const fullUrl = `${baseUrl}${endpoint.path}`;
+    
+    // Handle dynamic paths by showing example URL with test values
+    let displayUrl = endpoint.path;
+    let testUrl = endpoint.path;
+    if (endpoint.path.includes('{')) {
+        // Replace dynamic segments with test values for display
+        testUrl = endpoint.path.replace(/\{[^}]+\}/g, (match) => {
+            const paramName = match.slice(1, -1); // Remove { and }
+            const testValues = {
+                'id': '123',
+                'userId': '456', 
+                'email': 'test@example.com',
+                'postId': '789',
+                'commentId': '101'
+            };
+            return testValues[paramName] || 'test-value';
+        });
+        displayUrl = testUrl;
+    }
+    
+    const fullUrl = `${baseUrl}${displayUrl}`;
     
     container.innerHTML = `
-        <div class="section-title">${endpoint.method} ${endpoint.path}</div>
+        <div class="section-title">
+            ${endpoint.method} ${endpoint.path}
+            ${endpoint.path.includes('{') ? '<span class="dynamic-badge" title="This endpoint has dynamic path segments">Dynamic</span>' : ''}
+        </div>
         
         <div style="background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <div style="font-size: 12px; color: #718096; margin-bottom: 5px; font-weight: 500;">ENDPOINT URL</div>
+            ${endpoint.path.includes('{') ? `
+                <div style="margin-bottom: 10px; padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 12px;">
+                    <strong>Dynamic Path:</strong> ${endpoint.path}<br>
+                    <strong>Example URL:</strong> ${fullUrl}
+                </div>
+            ` : ''}
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                 <a href="${fullUrl}" target="_blank" style="font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 14px; color: #667eea; word-break: break-all; text-decoration: none; padding: 5px; border-radius: 4px; transition: all 0.3s ease; flex: 1;" 
                    onmouseover="this.style.background='#edf2f7'; this.style.color='#4a5568';" 

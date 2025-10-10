@@ -14,6 +14,7 @@ Simple Node.js mock server with a beautiful GUI for managing API endpoints and r
 - 🎯 **Path-based Organization** - Automatic folder structure based on API paths
 - ✨ **JSON Validation** - Real-time validation with helpful error messages
 - 🔒 **Reserved Path Protection** - Prevents conflicts with internal API routes
+- 🌐 **Dynamic Paths** - Support for variable URL segments like `/users/{id}/posts`
 
 ## Installation
 
@@ -54,19 +55,44 @@ mocker.start({
 
 ## Configuration
 
-### Environment Variables
-
-- `PORT` - Server port (default: 3000)
-- `MOCKS_DIR` - Directory to store mock data (default: `./mocks`)
-
-### Example Usage
+### Command Line Options
 
 ```bash
-# Custom port and directory
-PORT=8080 MOCKS_DIR=./api-mocks mocker
+mocker [options]
 
-# Or using npx
-npx mocker-server --port 8080 --mocks-dir ./api-mocks
+Options:
+  -p, --port <number>     Port to run the server on (default: 3000)
+  -d, --mocks-dir <path>  Directory to store mock data (default: ./mocks)
+  -h, --help              Show help message
+```
+
+### Environment Variables
+
+```bash
+# Set port and mocks directory
+PORT=8080 MOCKS_DIR=./api-mocks mocker
+```
+
+### Examples
+
+```bash
+# Default settings
+mocker
+
+# Custom port
+mocker --port 8080
+# or
+PORT=8080 mocker
+
+# Custom mocks directory
+mocker --mocks-dir ./api-mocks
+# or
+MOCKS_DIR=./api-mocks mocker
+
+# Both custom port and directory
+mocker --port 8080 --mocks-dir ./api-mocks
+# or
+PORT=8080 MOCKS_DIR=./api-mocks mocker
 ```
 
 ## Directory Structure
@@ -77,38 +103,32 @@ The server automatically creates the following structure:
 your-project/
 ├── mocks/                    # Default mocks directory
 │   └── endpoints/
-│       └── api/              # Based on your API paths
-│           └── users/
-│               ├── get.200.Success.json
-│               ├── get.404.Error.json
-│               ├── post.201.Created.json
-│               └── get.selected.json
+│       ├── api/              # Static paths
+│       │   └── users/
+│       │       ├── get.200.Success.json
+│       │       ├── get.404.Error.json
+│       │       └── get.selected.json
+│       └── users/             # Dynamic paths
+│           └── __id__/        # {id} becomes __id__
+│               └── posts/
+│                   ├── get.200.Success.json
+│                   └── get.selected.json
 └── your-other-files...
 ```
 
 ## API Endpoints
 
-### Management API
-- `GET /api/endpoints` - List all endpoints
-- `POST /api/endpoints` - Create new endpoint
-- `GET /api/endpoints/:id` - Get specific endpoint
-- `PUT /api/endpoints/:id` - Update endpoint
-- `DELETE /api/endpoints/:id` - Delete endpoint
-
-### Response Management
-- `POST /api/endpoints/:id/responses` - Add response
-- `PUT /api/endpoints/:id/responses/:name` - Update response
-- `DELETE /api/endpoints/:id/responses/:name` - Delete response
-- `PUT /api/endpoints/:id/select-response` - Select active response
-
 ### Mock API
 - `ALL /your-endpoint-path` - Returns the selected mock response
+- `ALL /users/{id}/posts` - Dynamic paths with variable segments
 
 ## GUI Features
 
 ### Endpoint Management
 - Create endpoints with path and HTTP method
+- Support for dynamic paths with `{param}` syntax
 - Visual status indicators for each response
+- Dynamic path indicators (🔄 icon and "Dynamic" badge)
 - One-click endpoint testing
 - Delete endpoints with confirmation
 
@@ -123,6 +143,8 @@ your-project/
 - Click endpoint URLs to open in new tab
 - Built-in test button with response preview
 - Real-time response display
+- Dynamic path testing with example URLs
+- Cache-busting headers prevent stale responses
 
 ## File Format
 
@@ -151,6 +173,66 @@ Example: `get.selected.json`
 }
 ```
 
+## Dynamic Paths
+
+Create flexible mock endpoints that handle variable URL segments using `{param}` syntax.
+
+### Examples
+
+**Basic Dynamic Path:**
+```
+/users/{id}
+```
+Matches: `/users/123`, `/users/456`, `/users/abc`
+
+**Multiple Parameters:**
+```
+/users/{userId}/posts/{postId}
+```
+Matches: `/users/123/posts/456`, `/users/john/posts/my-post`
+
+**Real-world Example:**
+```
+/users/auth/email-exists/{email}
+```
+Matches: `/users/auth/email-exists/test@example.com`
+
+### How It Works
+
+1. **Create Dynamic Endpoint**: Enter path like `/users/{id}/posts` in the GUI
+2. **Visual Indicators**: Dynamic paths show 🔄 icon and "Dynamic" badge
+3. **File Storage**: `{param}` becomes `__param__` in directory structure
+4. **Path Matching**: Server matches any value for `{param}` segments
+5. **Same Response**: All requests return the same mock response
+
+### Testing Dynamic Endpoints
+
+**In the GUI:**
+- Click "Test" button - automatically uses example values
+- View both original pattern and example URL
+
+**With curl:**
+```bash
+curl http://localhost:3000/users/123/posts
+curl http://localhost:3000/users/456/posts
+```
+
+**With JavaScript:**
+```javascript
+const response = await fetch('/users/123/posts');
+const data = await response.json();
+```
+
+### File Structure for Dynamic Paths
+
+```
+Path: /users/{id}/posts
+Files: mocks/endpoints/users/__id__/posts/
+  - get.200.Success.json
+  - get.500.Error.json
+  - get.selected.json
+```
+
 ## Development
 
 ### Running from Source
@@ -175,6 +257,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 🐛 Issues: [GitHub Issues](https://github.com/easingthemes/mocker/issues)
 
 ## Changelog
+
+### v1.1.0
+- 🌐 **Dynamic Paths** - Support for variable URL segments like `/users/{id}/posts`
+- 🔄 **Visual Indicators** - Dynamic path icons and badges in the GUI
+- 🧪 **Smart Testing** - Automatic test value substitution for dynamic paths
+- 🚫 **Cache Prevention** - No-cache headers prevent stale responses
+- 📁 **Enhanced File Structure** - Automatic `{param}` to `__param__` conversion
 
 ### v1.0.0
 - Initial release
