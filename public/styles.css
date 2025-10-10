@@ -505,6 +505,33 @@ body {
     font-size: 0.9rem;
 }
 
+/* Dynamic path indicators */
+.dynamic-indicator {
+    margin-left: 8px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.dynamic-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-help {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: #718096;
+    font-style: italic;
+}
+
 @media (max-width: 768px) {
     .main-content {
         grid-template-columns: 1fr;

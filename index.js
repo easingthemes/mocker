@@ -96,7 +96,14 @@ const isPortAvailable = (port) => {
 const getEndpointFilePath = (endpointPath, method, statusCode, name) => {
   // Clean the path and create directory structure
   const cleanPath = endpointPath.replace(/^\/+|\/+$/g, ''); // Remove leading/trailing slashes
-  const pathSegments = cleanPath ? cleanPath.split('/') : [];
+  
+  // Handle dynamic paths by replacing {param} with __param__ for directory structure
+  const dynamicPath = cleanPath.replace(/\{[^}]+\}/g, (match) => {
+    const paramName = match.slice(1, -1); // Remove { and }
+    return `__${paramName}__`;
+  });
+  
+  const pathSegments = dynamicPath ? dynamicPath.split('/') : [];
   const dirPath = path.join(ENDPOINTS_DIR, ...pathSegments);
   const fileName = `${method.toLowerCase()}.${statusCode}.${name}.json`;
   return path.join(dirPath, fileName);
@@ -123,7 +130,9 @@ const loadEndpoints = () => {
           // Check if this is a selected response file
           if (item.endsWith('.selected.json')) {
             const method = item.replace('.selected.json', '').toUpperCase();
-            const fullPath = currentPath ? `/${currentPath}` : '';
+            // Convert directory structure back to original path format
+            const originalPath = currentPath ? `/${currentPath}` : '';
+            const fullPath = originalPath.replace(/__([^_]+)__/g, '{$1}');
             
             // Create or update endpoint
             const endpointKey = `${method}|${fullPath}`;
@@ -152,7 +161,9 @@ const loadEndpoints = () => {
               const method = parts[0].toUpperCase();
               const statusCode = parseInt(parts[1]);
               const name = parts.slice(2).join('.');
-              const fullPath = currentPath ? `/${currentPath}` : '';
+              // Convert directory structure back to original path format
+              const originalPath = currentPath ? `/${currentPath}` : '';
+              const fullPath = originalPath.replace(/__([^_]+)__/g, '{$1}');
               
               // Load response body
               const responseBody = fs.readJsonSync(itemPath);
@@ -233,7 +244,14 @@ const deleteResponseFile = (endpointPath, method, statusCode, name) => {
 const deleteAllEndpointFiles = (endpointPath, method) => {
   try {
     const cleanPath = endpointPath.replace(/^\/+|\/+$/g, '');
-    const pathSegments = cleanPath ? cleanPath.split('/') : [];
+    
+    // Handle dynamic paths by replacing {param} with __param__ for directory structure
+    const dynamicPath = cleanPath.replace(/\{[^}]+\}/g, (match) => {
+      const paramName = match.slice(1, -1); // Remove { and }
+      return `__${paramName}__`;
+    });
+    
+    const pathSegments = dynamicPath ? dynamicPath.split('/') : [];
     const dirPath = path.join(ENDPOINTS_DIR, ...pathSegments);
     
     if (fs.existsSync(dirPath)) {
@@ -511,7 +529,14 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
   
   // Save selected response to a special file
   const cleanPath = endpoint.path.replace(/^\/+|\/+$/g, '');
-  const pathSegments = cleanPath ? cleanPath.split('/') : [];
+  
+  // Handle dynamic paths by replacing {param} with __param__ for directory structure
+  const dynamicPath = cleanPath.replace(/\{[^}]+\}/g, (match) => {
+    const paramName = match.slice(1, -1); // Remove { and }
+    return `__${paramName}__`;
+  });
+  
+  const pathSegments = dynamicPath ? dynamicPath.split('/') : [];
   const dirPath = path.join(ENDPOINTS_DIR, ...pathSegments);
   const selectedFile = path.join(dirPath, `${endpoint.method.toLowerCase()}.selected.json`);
   
@@ -553,6 +578,33 @@ app.post('/api/settings', (req, res) => {
   res.json({ message: 'Settings updated successfully', settings: serverSettings });
 });
 
+// Helper function to match dynamic paths
+const matchDynamicPath = (pattern, path) => {
+  // Convert pattern like /users/{id}/posts to regex
+  const regexPattern = pattern
+    .replace(/\{[^}]+\}/g, '([^/]+)') // Replace {param} with capture group
+    .replace(/\//g, '\\/'); // Escape forward slashes
+  
+  const regex = new RegExp(`^${regexPattern}$`);
+  const match = path.match(regex);
+  
+  if (match) {
+    // Extract parameter names from pattern
+    const paramNames = pattern.match(/\{([^}]+)\}/g)?.map(p => p.slice(1, -1)) || [];
+    const paramValues = match.slice(1); // Skip the full match
+    
+    // Create params object
+    const params = {};
+    paramNames.forEach((name, index) => {
+      params[name] = paramValues[index];
+    });
+    
+    return { match: true, params };
+  }
+  
+  return { match: false };
+};
+
 // Dynamic mock routing - this should be last to catch all routes
 app.use((req, res, next) => {
   // Skip static files and management API routes
@@ -574,11 +626,28 @@ app.use((req, res, next) => {
   const method = req.method.toUpperCase();
   const path = req.path;
   
-  // Find matching endpoint
-  const endpoint = endpoints.find(ep => {
-    // Simple path matching - you could enhance this with regex or more sophisticated matching
+  // Find matching endpoint - first try exact match, then dynamic match
+  let endpoint = endpoints.find(ep => {
     return ep.method === method && ep.path === path;
   });
+  
+  // If no exact match, try dynamic path matching
+  if (!endpoint) {
+    endpoint = endpoints.find(ep => {
+      if (ep.method !== method) return false;
+      
+      // Check if this endpoint has dynamic segments (contains {})
+      if (ep.path.includes('{')) {
+        const matchResult = matchDynamicPath(ep.path, path);
+        if (matchResult.match) {
+          // Store the matched parameters in the request object for potential use
+          req.dynamicParams = matchResult.params;
+          return true;
+        }
+      }
+      return false;
+    });
+  }
   
   if (!endpoint) {
     return next(); // Let Express handle 404 for unmatched routes
@@ -589,6 +658,11 @@ app.use((req, res, next) => {
   if (!selectedResponse) {
     selectedResponse = endpoint.responses[0];
   }
+  
+  // Set cache control headers to prevent browser caching
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   
   // Apply response delay if configured
   if (serverSettings.responseDelay > 0) {
