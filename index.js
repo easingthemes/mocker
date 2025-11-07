@@ -93,9 +93,35 @@ const isPortAvailable = (port) => {
 };
 
 // Helper functions
-const getEndpointFilePath = (endpointPath, method, statusCode, name) => {
-  // Clean the path and create directory structure
-  const cleanPath = endpointPath.replace(/^\/+|\/+$/g, ''); // Remove leading/trailing slashes
+const encodeQueryParams = (queryString) => {
+  // Encode query parameters for filesystem using base64
+  if (!queryString) return '';
+  return Buffer.from(queryString).toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+};
+
+const decodeQueryParams = (encoded) => {
+  // Decode filesystem name back to query string
+  if (!encoded || !encoded.startsWith('__QUERY__')) return '';
+  const queryPart = encoded.replace('__QUERY__', '');
+  try {
+    const decoded = Buffer.from(
+      queryPart.replace(/-/g, '+').replace(/_/g, '/'),
+      'base64'
+    ).toString();
+    // Ensure it starts with ? if it's not empty
+    return decoded ? (decoded.startsWith('?') ? decoded : `?${decoded}`) : '';
+  } catch {
+    return '';
+  }
+};
+
+const getEndpointDirPath = (endpointPath) => {
+  // Split path and query string
+  const [pathPart, queryPart] = endpointPath.split('?');
+  const cleanPath = pathPart.replace(/^\/+|\/+$/g, ''); // Remove leading/trailing slashes
   
   // Handle dynamic paths by replacing {param} with __param__ for directory structure
   const dynamicPath = cleanPath.replace(/\{[^}]+\}/g, (match) => {
@@ -104,10 +130,24 @@ const getEndpointFilePath = (endpointPath, method, statusCode, name) => {
   });
   
   const pathSegments = dynamicPath ? dynamicPath.split('/') : [];
-  const dirPath = path.join(ENDPOINTS_DIR, ...pathSegments);
+  
+  // Add query params as a directory segment if they exist
+  if (queryPart) {
+    const encodedQuery = encodeQueryParams(queryPart);
+    if (encodedQuery) {
+      pathSegments.push(`__QUERY__${encodedQuery}`);
+    }
+  }
+  
+  return path.join(ENDPOINTS_DIR, ...pathSegments);
+};
+
+const getEndpointFilePath = (endpointPath, method, statusCode, name) => {
+  const dirPath = getEndpointDirPath(endpointPath);
   const fileName = `${method.toLowerCase()}.${statusCode}.${name}.json`;
   return path.join(dirPath, fileName);
 };
+
 
 const loadEndpoints = () => {
   try {
@@ -123,16 +163,42 @@ const loadEndpoints = () => {
         const stat = fs.statSync(itemPath);
         
         if (stat.isDirectory()) {
-          // Recursively load from subdirectories
-          const newPath = currentPath ? `${currentPath}/${item}` : item;
+          // Check if this is a query parameter directory
+          let newPath;
+          if (item.startsWith('__QUERY__')) {
+            // Decode query params and append to path
+            const queryString = decodeQueryParams(item);
+            newPath = currentPath ? `${currentPath}${queryString}` : queryString;
+          } else {
+            // Regular directory
+            newPath = currentPath ? `${currentPath}/${item}` : item;
+          }
           loadFromDirectory(itemPath, newPath);
         } else if (item.endsWith('.json')) {
           // Check if this is a selected response file
           if (item.endsWith('.selected.json')) {
             const method = item.replace('.selected.json', '').toUpperCase();
             // Convert directory structure back to original path format
-            const originalPath = currentPath ? `/${currentPath}` : '';
-            const fullPath = originalPath.replace(/__([^_]+)__/g, '{$1}');
+            // Handle paths with query strings - split path and query
+            let pathPart = currentPath || '';
+            let queryPart = '';
+            
+            if (pathPart.includes('?')) {
+              const parts = pathPart.split('?');
+              pathPart = parts[0];
+              queryPart = '?' + parts.slice(1).join('?');
+            }
+            
+            // Handle dynamic path segments (only in path part, not query)
+            pathPart = pathPart.replace(/__([^_]+)__/g, '{$1}');
+            
+            // Ensure path starts with / if it doesn't already
+            if (pathPart && !pathPart.startsWith('/')) {
+              pathPart = `/${pathPart}`;
+            }
+            
+            // Reconstruct full path with query string
+            const fullPath = pathPart + queryPart;
             
             // Create or update endpoint
             const endpointKey = `${method}|${fullPath}`;
@@ -162,8 +228,26 @@ const loadEndpoints = () => {
               const statusCode = parseInt(parts[1]);
               const name = parts.slice(2).join('.');
               // Convert directory structure back to original path format
-              const originalPath = currentPath ? `/${currentPath}` : '';
-              const fullPath = originalPath.replace(/__([^_]+)__/g, '{$1}');
+              // Handle paths with query strings - split path and query
+              let pathPart = currentPath || '';
+              let queryPart = '';
+              
+              if (pathPart.includes('?')) {
+                const parts = pathPart.split('?');
+                pathPart = parts[0];
+                queryPart = '?' + parts.slice(1).join('?');
+              }
+              
+              // Handle dynamic path segments (only in path part, not query)
+              pathPart = pathPart.replace(/__([^_]+)__/g, '{$1}');
+              
+              // Ensure path starts with / if it doesn't already
+              if (pathPart && !pathPart.startsWith('/')) {
+                pathPart = `/${pathPart}`;
+              }
+              
+              // Reconstruct full path with query string
+              const fullPath = pathPart + queryPart;
               
               // Load response body
               const responseBody = fs.readJsonSync(itemPath);
@@ -243,16 +327,7 @@ const deleteResponseFile = (endpointPath, method, statusCode, name) => {
 
 const deleteAllEndpointFiles = (endpointPath, method) => {
   try {
-    const cleanPath = endpointPath.replace(/^\/+|\/+$/g, '');
-    
-    // Handle dynamic paths by replacing {param} with __param__ for directory structure
-    const dynamicPath = cleanPath.replace(/\{[^}]+\}/g, (match) => {
-      const paramName = match.slice(1, -1); // Remove { and }
-      return `__${paramName}__`;
-    });
-    
-    const pathSegments = dynamicPath ? dynamicPath.split('/') : [];
-    const dirPath = path.join(ENDPOINTS_DIR, ...pathSegments);
+    const dirPath = getEndpointDirPath(endpointPath);
     
     if (fs.existsSync(dirPath)) {
       const files = fs.readdirSync(dirPath);
@@ -281,13 +356,44 @@ const deleteAllEndpointFiles = (endpointPath, method) => {
 
 // API Routes
 
+// Helper functions for URL-safe base64 encoding/decoding
+const encodeEndpointId = (method, path) => {
+  return Buffer.from(`${method}|${path}`)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+};
+
+const decodeEndpointId = (id) => {
+  try {
+    // Add padding if needed
+    let base64 = id.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    return Buffer.from(base64, 'base64').toString();
+  } catch (error) {
+    return null;
+  }
+};
+
+const findEndpointById = (endpoints, id) => {
+  const decoded = decodeEndpointId(id);
+  if (!decoded) {
+    return null;
+  }
+  const [method, path] = decoded.split('|');
+  return endpoints.find(ep => ep.method === method && ep.path === path) || null;
+};
+
 // Get all endpoints
 app.get('/api/endpoints', (req, res) => {
   const endpoints = loadEndpoints();
   // Add ID field for frontend compatibility
   const endpointsWithIds = endpoints.map(endpoint => ({
     ...endpoint,
-    id: Buffer.from(`${endpoint.method}|${endpoint.path}`).toString('base64')
+    id: encodeEndpointId(endpoint.method, endpoint.path)
   }));
   res.json(endpointsWithIds);
 });
@@ -295,7 +401,7 @@ app.get('/api/endpoints', (req, res) => {
 // Get single endpoint
 app.get('/api/endpoints/:id', (req, res) => {
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -304,7 +410,7 @@ app.get('/api/endpoints/:id', (req, res) => {
   // Add ID field for frontend compatibility
   const endpointWithId = {
     ...endpoint,
-    id: Buffer.from(`${endpoint.method}|${endpoint.path}`).toString('base64')
+    id: encodeEndpointId(endpoint.method, endpoint.path)
   };
   
   res.json(endpointWithId);
@@ -320,11 +426,12 @@ app.post('/api/endpoints', (req, res) => {
   
   const methodUpper = method.toUpperCase();
   
-  // Normalize path - ensure it starts with a slash
+  // Keep query parameters in path - just ensure it starts with a slash
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   
-  // Check if path is reserved for the application
-  if (normalizedPath.startsWith('/api/endpoints')) {
+  // Check if path (without query) is reserved for the application
+  const pathWithoutQuery = path.split('?')[0];
+  if (pathWithoutQuery.startsWith('/api/endpoints')) {
     return res.status(400).json({ 
       error: 'Path /api/endpoints is reserved for the application and cannot be used' 
     });
@@ -368,7 +475,7 @@ app.post('/api/endpoints', (req, res) => {
     // Add ID field for frontend compatibility
     const endpointWithId = {
       ...newEndpoint,
-      id: Buffer.from(`${newEndpoint.method}|${newEndpoint.path}`).toString('base64')
+      id: encodeEndpointId(newEndpoint.method, newEndpoint.path)
     };
     res.json(endpointWithId);
   } else {
@@ -379,16 +486,16 @@ app.post('/api/endpoints', (req, res) => {
 // Update endpoint
 app.put('/api/endpoints/:id', (req, res) => {
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
   }
   
-  const { path, method } = req.body;
+  const { path: newPath, method: newMethod } = req.body;
   
   // If path or method changed, we need to move files
-  if ((path && path !== endpoint.path) || (method && method.toUpperCase() !== endpoint.method)) {
+  if ((newPath && newPath !== endpoint.path) || (newMethod && newMethod.toUpperCase() !== endpoint.method)) {
     // This is a complex operation - for now, return error
     return res.status(400).json({ error: 'Changing endpoint path or method is not supported' });
   }
@@ -396,7 +503,7 @@ app.put('/api/endpoints/:id', (req, res) => {
   // For now, just return the existing endpoint
   const endpointWithId = {
     ...endpoint,
-    id: Buffer.from(`${endpoint.method}|${endpoint.path}`).toString('base64')
+    id: encodeEndpointId(endpoint.method, endpoint.path)
   };
   res.json(endpointWithId);
 });
@@ -404,7 +511,7 @@ app.put('/api/endpoints/:id', (req, res) => {
 // Delete endpoint
 app.delete('/api/endpoints/:id', (req, res) => {
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -426,7 +533,7 @@ app.post('/api/endpoints/:id/responses', (req, res) => {
   }
   
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -452,7 +559,7 @@ app.put('/api/endpoints/:id/responses/:responseName', (req, res) => {
   const responseName = decodeURIComponent(req.params.responseName);
   
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -486,7 +593,7 @@ app.put('/api/endpoints/:id/responses/:responseName', (req, res) => {
 app.delete('/api/endpoints/:id/responses/:responseName', (req, res) => {
   const responseName = decodeURIComponent(req.params.responseName);
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -515,7 +622,7 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
   const { responseName } = req.body;
   
   const endpoints = loadEndpoints();
-  const endpoint = endpoints.find(ep => Buffer.from(`${ep.method}|${ep.path}`).toString('base64') === req.params.id);
+  const endpoint = findEndpointById(endpoints, req.params.id);
   
   if (!endpoint) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -528,16 +635,7 @@ app.put('/api/endpoints/:id/select-response', (req, res) => {
   }
   
   // Save selected response to a special file
-  const cleanPath = endpoint.path.replace(/^\/+|\/+$/g, '');
-  
-  // Handle dynamic paths by replacing {param} with __param__ for directory structure
-  const dynamicPath = cleanPath.replace(/\{[^}]+\}/g, (match) => {
-    const paramName = match.slice(1, -1); // Remove { and }
-    return `__${paramName}__`;
-  });
-  
-  const pathSegments = dynamicPath ? dynamicPath.split('/') : [];
-  const dirPath = path.join(ENDPOINTS_DIR, ...pathSegments);
+  const dirPath = getEndpointDirPath(endpoint.path);
   const selectedFile = path.join(dirPath, `${endpoint.method.toLowerCase()}.selected.json`);
   
   try {
@@ -624,22 +722,41 @@ app.use((req, res, next) => {
   
   const endpoints = loadEndpoints();
   const method = req.method.toUpperCase();
-  const path = req.path;
+  
+  // Build full request path including query parameters
+  let requestPath = req.path;
+  if (req.url.includes('?')) {
+    // Extract query string from original URL
+    const queryString = req.url.split('?')[1];
+    requestPath = `${req.path}?${queryString}`;
+  }
   
   // Find matching endpoint - first try exact match, then dynamic match
   let endpoint = endpoints.find(ep => {
-    return ep.method === method && ep.path === path;
+    return ep.method === method && ep.path === requestPath;
   });
   
-  // If no exact match, try dynamic path matching
+  // If no exact match, try dynamic path matching (without query params for path matching)
   if (!endpoint) {
+    const pathWithoutQuery = requestPath.split('?')[0];
     endpoint = endpoints.find(ep => {
       if (ep.method !== method) return false;
       
+      const epPathWithoutQuery = ep.path.split('?')[0];
+      
       // Check if this endpoint has dynamic segments (contains {})
-      if (ep.path.includes('{')) {
-        const matchResult = matchDynamicPath(ep.path, path);
+      if (epPathWithoutQuery.includes('{')) {
+        const matchResult = matchDynamicPath(epPathWithoutQuery, pathWithoutQuery);
         if (matchResult.match) {
+          // Check if query params also match
+          const epQuery = ep.path.includes('?') ? ep.path.split('?')[1] : '';
+          const reqQuery = requestPath.includes('?') ? requestPath.split('?')[1] : '';
+          
+          // If endpoint has query params, they must match exactly
+          if (epQuery && epQuery !== reqQuery) {
+            return false;
+          }
+          
           // Store the matched parameters in the request object for potential use
           req.dynamicParams = matchResult.params;
           return true;
