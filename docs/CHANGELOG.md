@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/easingthemes/mocker/compare/v1.2.0...v1.3.0) (2025-11-07)
+
+
+### Features
+
+* add query params support ([9305b74](https://github.com/easingthemes/mocker/commit/9305b7472019274e32e67bb2ef005b525e641c7a))
+
 # [1.2.0](https://github.com/easingthemes/mocker/compare/v1.1.0...v1.2.0) (2025-10-10)
 
 
