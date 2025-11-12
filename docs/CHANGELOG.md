@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/easingthemes/mocker/compare/v1.3.0...v1.3.1) (2025-11-12)
+
+
+### Bug Fixes
+
+* add dynamic query params support ([070cebb](https://github.com/easingthemes/mocker/commit/070cebbdc48a837de55339827105cc99d1b82cc9))
+
 # [1.3.0](https://github.com/easingthemes/mocker/compare/v1.2.0...v1.3.0) (2025-11-07)
 
 

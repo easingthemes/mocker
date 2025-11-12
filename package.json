@@ -1,6 +1,6 @@
 {
   "name": "@draganfilipovic/mocker",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Simple Node.js mock server with GUI for managing API endpoints and responses",
   "private": false,
   "publishConfig": {
