@@ -703,6 +703,72 @@ const matchDynamicPath = (pattern, path) => {
   return { match: false };
 };
 
+const parseQueryString = (queryString) => {
+  // Parse query string into key-value pairs
+  const params = {};
+  if (!queryString) return params;
+  
+  const pairs = queryString.split('&');
+  for (const pair of pairs) {
+    const equalIndex = pair.indexOf('=');
+    if (equalIndex === -1) {
+      // No = sign, treat as key with empty value
+      const key = decodeURIComponent(pair);
+      if (key) {
+        params[key] = '';
+      }
+    } else {
+      const key = decodeURIComponent(pair.substring(0, equalIndex));
+      const value = decodeURIComponent(pair.substring(equalIndex + 1));
+      if (key) {
+        params[key] = value;
+      }
+    }
+  }
+  return params;
+};
+
+const matchDynamicQuery = (patternQuery, requestQuery) => {
+  // Match query strings with dynamic variables
+  // Pattern: start_date={start}&end_date={end}
+  // Request: start_date=test-value&end_date=test-value2
+  
+  const patternParams = parseQueryString(patternQuery);
+  const requestParams = parseQueryString(requestQuery);
+  
+  // Check if all pattern keys exist in request
+  for (const [key, patternValue] of Object.entries(patternParams)) {
+    if (!(key in requestParams)) {
+      return { match: false };
+    }
+    
+    // If pattern value is a dynamic variable {var}, it matches any value
+    if (patternValue.startsWith('{') && patternValue.endsWith('}')) {
+      // This is a dynamic variable, it matches any value
+      continue;
+    }
+    
+    // Otherwise, values must match exactly
+    if (patternValue !== requestParams[key]) {
+      return { match: false };
+    }
+  }
+  
+  // Check if request has extra params not in pattern (optional - you might want to allow this)
+  // For now, we'll allow extra params in the request
+  
+  // Extract dynamic parameter values
+  const params = {};
+  for (const [key, patternValue] of Object.entries(patternParams)) {
+    if (patternValue.startsWith('{') && patternValue.endsWith('}')) {
+      const paramName = patternValue.slice(1, -1);
+      params[paramName] = requestParams[key];
+    }
+  }
+  
+  return { match: true, params };
+};
+
 // Dynamic mock routing - this should be last to catch all routes
 app.use((req, res, next) => {
   // Skip static files and management API routes
@@ -739,30 +805,56 @@ app.use((req, res, next) => {
   // If no exact match, try dynamic path matching (without query params for path matching)
   if (!endpoint) {
     const pathWithoutQuery = requestPath.split('?')[0];
+    const reqQuery = requestPath.includes('?') ? requestPath.split('?')[1] : '';
+    
     endpoint = endpoints.find(ep => {
       if (ep.method !== method) return false;
       
       const epPathWithoutQuery = ep.path.split('?')[0];
+      const epQuery = ep.path.includes('?') ? ep.path.split('?')[1] : '';
       
-      // Check if this endpoint has dynamic segments (contains {})
-      if (epPathWithoutQuery.includes('{')) {
+      // Check if path has dynamic segments
+      const pathHasDynamic = epPathWithoutQuery.includes('{');
+      
+      // Match path part
+      let pathMatch = false;
+      let pathParams = {};
+      
+      if (pathHasDynamic) {
         const matchResult = matchDynamicPath(epPathWithoutQuery, pathWithoutQuery);
         if (matchResult.match) {
-          // Check if query params also match
-          const epQuery = ep.path.includes('?') ? ep.path.split('?')[1] : '';
-          const reqQuery = requestPath.includes('?') ? requestPath.split('?')[1] : '';
-          
-          // If endpoint has query params, they must match exactly
-          if (epQuery && epQuery !== reqQuery) {
-            return false;
-          }
-          
-          // Store the matched parameters in the request object for potential use
-          req.dynamicParams = matchResult.params;
-          return true;
+          pathMatch = true;
+          pathParams = matchResult.params;
         }
+      } else if (epPathWithoutQuery === pathWithoutQuery) {
+        pathMatch = true;
       }
-      return false;
+      
+      if (!pathMatch) {
+        return false;
+      }
+      
+      // Match query part
+      if (epQuery && reqQuery) {
+        // Both have query params - match them
+        const queryMatch = matchDynamicQuery(epQuery, reqQuery);
+        if (!queryMatch.match) {
+          return false;
+        }
+        // Merge query params with path params
+        req.dynamicParams = { ...pathParams, ...queryMatch.params };
+      } else if (epQuery && !reqQuery) {
+        // Endpoint expects query params but request doesn't have them
+        return false;
+      } else if (!epQuery && reqQuery) {
+        // Endpoint doesn't have query params but request does - this is OK
+        req.dynamicParams = pathParams;
+      } else {
+        // Neither has query params
+        req.dynamicParams = pathParams;
+      }
+      
+      return true;
     });
   }
   
