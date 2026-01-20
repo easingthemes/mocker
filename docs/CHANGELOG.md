@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/easingthemes/mocker/compare/v1.3.1...v1.4.0) (2026-01-20)
+
+
+### Features
+
+* add static files server ([4ff8bc1](https://github.com/easingthemes/mocker/commit/4ff8bc1f16e03c5af8902239d822203a89a748a3))
+
 ## [1.3.1](https://github.com/easingthemes/mocker/compare/v1.3.0...v1.3.1) (2025-11-12)
 
 
