@@ -61,10 +61,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Data storage paths - configurable via environment variables or CLI
 const MOCKS_DIR = mocksDir || path.join(process.cwd(), 'mocks');
 const ENDPOINTS_DIR = path.join(MOCKS_DIR, 'endpoints');
+const MOCKS_PUBLIC_DIR = path.join(MOCKS_DIR, 'public');
 
 // Ensure data directories exist
 fs.ensureDirSync(MOCKS_DIR);
 fs.ensureDirSync(ENDPOINTS_DIR);
+fs.ensureDirSync(MOCKS_PUBLIC_DIR);
+
+// Serve static files from mocks/public folder
+// This is served after the built-in public folder, so built-in files take precedence
+app.use(express.static(MOCKS_PUBLIC_DIR));
 
 // Settings storage
 let serverSettings = {
@@ -900,9 +906,9 @@ const startServer = async () => {
     console.log('');
   }
   
-  app.listen(PORT, () => {
-    console.log(`🚀 Mocker Server running on http://localhost:${PORT}`);
-    console.log(`📱 GUI available at http://localhost:${PORT}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Mocker Server running on http://0.0.0.0:${PORT}`);
+    console.log(`📱 GUI available at http://0.0.0.0:${PORT}`);
     console.log(`📁 Mocks directory: ${MOCKS_DIR}`);
     console.log(`💡 Use --help for more options`);
   });
